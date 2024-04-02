@@ -1,0 +1,14 @@
+13
+Dialogue Narrator 4 Once upon a time
+Create character fighter Arthur 200
+Create item weapon Arthur Excalibur 50
+Attack Arthur John Excalibur
+Create character archer Robin 150
+Create character wizard Harry 100
+Attack Arthur Harry Excalibur
+Show characters
+Attack Arthur Harry Excalibur
+Show characters
+Show weapons Arthur
+Show potions Arthur
+Show spells Arthur
