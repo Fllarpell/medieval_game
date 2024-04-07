@@ -1,0 +1,14 @@
+Narrator: Once upon a time 
+A new fighter came to town, Arthur.
+Arthur just obtained a new weapon called Excalibur.
+Error caught
+A new archer came to town, Robin.
+A new wizard came to town, Harry.
+Arthur attacks Harry with their Excalibur!
+Arthur:fighter:200 Harry:wizard:50 Robin:archer:150 
+Arthur attacks Harry with their Excalibur!
+Harry has died...
+Arthur:fighter:200 Robin:archer:150 
+Excalibur:50 
+
+Error caught

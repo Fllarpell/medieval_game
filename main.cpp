@@ -10,160 +10,41 @@
 
 class Character;
 class Weapon;
+class Potion;
+class Spell;
 class Fighter;
-class WeaponUser;
-class PotionUser;
-class SpellUser;
+class Archer;
+class Wizard;
 class Arsenal;
+class MedicalBag;
+class SpellBook;
 
-template <typename T>
-class Container;
+static std::map<std::string, std::shared_ptr<Character>> characters;
 
 
 template <typename T>
 class PhysicalItem {
-protected:
-    Character& getOwner() { return *owner; }
-
 public:
-    PhysicalItem(std::string name, std::shared_ptr<Character> owner) : name(std::move(name)), owner(std::move(owner)) {}
+    explicit PhysicalItem(std::string name) : name(std::move(name)) {}
 
     virtual ~PhysicalItem() = default;
 
-    virtual void use(std::shared_ptr<Character> target, std::ofstream &outputFile) {};
-
     std::string getName() { return this->name; }
 
-    void setContainer (std::shared_ptr<Container<T>> box) {
-        this->container = box;
-    }
-
 private:
-    std::shared_ptr<Character> owner;
     std::string name;
-
-    std::shared_ptr<Container<T>> container;
 };
-
-
-class Character {
-
-public:
-    explicit Character(std::string name, int initHP, std::string class_hero) : name(std::move(name)), healthPoints(initHP), class_type(std::move(class_hero)) {
-        characters.insert({name, std::make_shared<Character>(*this)});
-    }
-    virtual ~Character() = default;
-
-    [[nodiscard]] std::string getName() const { return this->name; }
-
-    [[nodiscard]] int getHP() const { return this->healthPoints; }
-
-    [[nodiscard]] std::string getClassType() const { return this->class_type; }
-
-    void setHP(int HP) { this->healthPoints = HP; }
-
-    static std::map<std::string, std::shared_ptr<Character>> getMapCharacters() {
-        return characters;
-    }
-
-    static std::map<std::string, std::shared_ptr<Character>> characters;
-private:
-    int healthPoints;
-    std::string name;
-    std::string class_type;
-};
-
-
-class Weapon : public PhysicalItem<Weapon> {
-public:
-    Weapon(std::string weaponName, int damage, std::shared_ptr<Character> owner) : damage(damage), PhysicalItem(std::move(weaponName), std::move(owner)) {}
-
-    [[nodiscard]] int getDamage() const { return this->damage; }
-
-    void use(std::shared_ptr<Character> target, std::ofstream &outputFile) override {
-        target->setHP(target->getHP()-getDamage());
-
-        if (target->getHP() <= 0) {
-            outputFile << target->getName() << " has died..." << std::endl;
-            target->~Character();
-        }
-    }
-
-private:
-    int damage;
-
-};
-
-
-class Potion : public PhysicalItem<Potion> {
-
-public:
-    Potion(std::string potionName, int healValue, std::shared_ptr<Character> owner) : healValue(healValue), PhysicalItem(std::move(potionName), std::move(owner)) {}
-
-    [[nodiscard]] int getHealValue() const { return this->healValue; }
-
-    void use(std::shared_ptr<Character> target, std::ofstream &outputFile) override {
-        target->setHP(target->getHP()+getHealValue());
-    }
-
-private:
-    int healValue;
-};
-
-
-class Spell : public PhysicalItem<Spell> {
-
-public:
-
-    Spell(std::string spellName, std::vector<std::shared_ptr<Character>> allowedTargets, std::shared_ptr<Character> owner) : allowedTargets(std::move(allowedTargets)), PhysicalItem(std::move(spellName), std::move(owner)) {}
-
-    int getNumAllowedTargets() { return this->allowedTargets.size(); }
-
-    void use(std::shared_ptr<Character> target, std::ofstream &outputFile) override {
-        bool _allowed_to_cast = false;
-        for (int i = 0; i < allowedTargets.size(); ++i) {
-            if (allowedTargets[i] == target) {
-                _allowed_to_cast = true;
-                break;
-            }
-        }
-        if (_allowed_to_cast) {
-            outputFile << target->getName() << " has died..." << std::endl;
-            target->~Character();
-        } else {
-            outputFile << "Error caught" << std::endl;
-        }
-    }
-
-private:
-    std::vector<std::shared_ptr<Character>> allowedTargets;
-
-};
-
 
 template <typename T>
-class Container : public PhysicalItem<T> {
+class Container {
 public:
-    explicit Container(std::string name, int max_capacity, const std::shared_ptr<Character>& owner) : capacity(max_capacity), PhysicalItem<T>(name, owner) {}
-    ~Container() override = default;
+    std::map<std::string, std::shared_ptr<T>> elements;
+
+    Container() = default;
+    ~Container() = default;
 
     void addItem(std::shared_ptr<T> newItem) {
         elements.insert({newItem->getName(), newItem});
-    }
-
-    void removeItem(std::shared_ptr<T> newItem) {
-        while (elements.begin != elements.end && elements.begin->second != newItem) { ++elements.begin; }
-
-        if (elements.begin->second == newItem)
-            elements.erase(elements.begin->first);
-    }
-
-    bool find(std::shared_ptr<T> item) {
-        while (elements.begin != elements.end && elements.begin->second != item) { ++elements.begin; }
-
-        if (elements.begin->second == item)
-            return true;
-        return false;
     }
 
     std::shared_ptr<T> find(std::string itemName) {
@@ -174,127 +55,257 @@ public:
         elements.erase(itemName);
     }
 
-    std::map<std::string, std::shared_ptr<T>> getElements() {
-        return this->elements;
-    }
+};
 
+class Weapon : public PhysicalItem<Weapon> {
 private:
-    int capacity;
-    static std::map<std::string, std::shared_ptr<T>> elements;
+    int damage;
+
+public:
+    Weapon(std::string weaponName, int damage) : damage(damage), PhysicalItem(std::move(weaponName)) {}
+
+    [[nodiscard]] int getDamage() const { return this->damage; }
+
+};
+
+
+class Potion : public PhysicalItem<Potion> {
+private:
+    int healValue;
+
+public:
+    Potion(std::string potionName, int healValue) : healValue(healValue), PhysicalItem(std::move(potionName)) {}
+
+    [[nodiscard]] int getHealValue() const { return this->healValue; }
+
+};
+
+
+class Spell : public PhysicalItem<Spell> {
+private:
+    std::vector<std::shared_ptr<Character>> allowedTargets;
+
+public:
+
+    Spell(std::string spellName, std::vector<std::shared_ptr<Character>> allowedTargets) : allowedTargets(std::move(allowedTargets)), PhysicalItem(std::move(spellName)) {}
+
+    int getNumAllowedTargets() { return this->allowedTargets.size(); }
+
+    std::vector<std::shared_ptr<Character>> getAllowedTargets() { return this->allowedTargets; }
 
 };
 
 
 class Arsenal : public Container<Weapon> {
 public:
-    explicit Arsenal(int max_capacity, const std::shared_ptr<Character>& owner, std::string name) : capacity(max_capacity), Container<Weapon>("container weapon" + name, max_capacity, owner) {}
-    ~Arsenal() override = default;
-
-private:
-    int capacity;
+    Arsenal() = default;
+    ~Arsenal() = default;
 };
 
 
 class MedicalBag : public Container<Potion> {
 public:
-    explicit MedicalBag(int max_capacity, const std::shared_ptr<Character>& owner, std::string name) : capacity(max_capacity), Container<Potion>("container potion" + name, max_capacity, owner) {}
-    ~MedicalBag() override = default;
-
-private:
-    int capacity;
+    MedicalBag() = default;
+    ~MedicalBag() = default;
 };
 
 
 class SpellBook : public Container<Spell> {
 public:
-    explicit SpellBook(int max_capacity, const std::shared_ptr<Character>& owner, std::string name) : capacity(max_capacity), Container<Spell>("container spell" + name, max_capacity, owner) {}
-    ~SpellBook() override = default;
+    SpellBook() = default;
+    ~SpellBook() = default;
+};
 
+class Character {
 private:
-    int capacity;
-};
+    int healthPoints;
+    std::string name;
+    std::string class_type;
 
-
-class WeaponUser : public Character, public Arsenal {
-protected:
     std::shared_ptr<Arsenal> arsenal;
-public:
-    WeaponUser(std::string name, int healthPoints, int max_capacity, std::string class_hero) : Character(std::move(name), healthPoints, class_hero), Arsenal(max_capacity, Character::getMapCharacters().find(name)->second, name) {
-    }
-    ~WeaponUser() override = default;
-
-    virtual void attack(std::shared_ptr<Character> target, std::string weaponName, std::ofstream &outputFile) {
-        arsenal->find(std::move(weaponName))->use(std::move(target), outputFile);
-    }
-
-    std::shared_ptr<Arsenal> getArsenal() {return this->arsenal;}
-
-};
-
-
-class PotionUser : public Character, public MedicalBag {
-protected:
     std::shared_ptr<MedicalBag> medicalBag;
+    std::shared_ptr<SpellBook> spellBook;
+
 public:
-    PotionUser(std::string name, int healthPoints, int max_capacity, std::string class_hero) : Character(std::move(name), healthPoints, class_hero), MedicalBag(max_capacity, Character::getMapCharacters().find(name)->second, name) {
+    Character(const std::string& name, int initHP, const std::string& class_hero) : name(name), healthPoints(initHP), class_type(class_hero) {}
+    Character(const std::string& name, int initHP, const std::string& class_hero,
+              std::shared_ptr<Arsenal> arsenal, std::shared_ptr<MedicalBag> medicalBag,
+              std::shared_ptr<SpellBook> spellBook) : name(name), healthPoints(initHP),
+              class_type(class_hero), arsenal(arsenal), medicalBag(medicalBag), spellBook(spellBook) {}
+    virtual ~Character() {
+        arsenal.reset();
+        medicalBag.reset();
+        spellBook.reset();
+    };
+
+    [[nodiscard]] std::string getName() const { return this->name; }
+
+    [[nodiscard]] int getHP() const { return this->healthPoints; }
+
+    [[nodiscard]] std::string getClassType() const { return this->class_type; }
+
+    void setHP(int HP) { this->healthPoints = HP; }
+
+    void attack(std::shared_ptr<Character> target, std::string weaponName, std::ofstream &outputFile) {
+        if (this->arsenal->elements.count(weaponName) == 0) {
+            outputFile << "Error caught" << std::endl;
+            return;
+        }
+        outputFile << this->getName() << " attacks " << target->getName() << " with their " << weaponName << "!" << std::endl;
+        target->setHP(target->getHP()-this->arsenal->find(std::move(weaponName))->getDamage());
     }
-    ~PotionUser() override = default;
 
     void drink(std::shared_ptr<Character> target, const std::string& potionName, std::ofstream &outputFile) {
-        medicalBag->find(potionName)->use(std::move(target), outputFile);
-        medicalBag->removeItem(potionName);
+        if (this->medicalBag->elements.count(potionName) == 0) {
+            outputFile << "Error caught" << std::endl;
+            return;
+        }
+        target->setHP(target->getHP()+this->medicalBag->find(potionName)->getHealValue());
+        outputFile << target->getName() << " drinks " << potionName << " from " << this->getName() << "." << std::endl;
+        this->medicalBag->removeItem(potionName);
     }
-
-    std::shared_ptr<MedicalBag> getMedicalBag() {return this->medicalBag;}
-
-};
-
-
-class SpellUser : public Character, public SpellBook {
-protected:
-    std::shared_ptr<SpellBook> spellBook;
-public:
-    SpellUser(std::string name, int healthPoints, int max_capacity, std::string class_hero) : Character(std::move(name), healthPoints, class_hero), SpellBook(max_capacity, Character::getMapCharacters().find(name)->second, name) {
-    }
-    ~SpellUser() override = default;
 
     void cast(std::shared_ptr<Character> target, const std::string& spellName, std::ofstream &outputFile) {
-        spellBook->find(spellName)->use(std::move(target), outputFile);
-        spellBook->removeItem(spellName);
+        if (this->spellBook->elements.count(spellName) == 0) {
+            outputFile << "Error caught" << std::endl;
+            return;
+        }
+        bool _allowed_to_cast = false;
+        for (const auto & allowedTarget : this->spellBook->find(spellName)->getAllowedTargets()) {
+            if (allowedTarget == target) {
+                _allowed_to_cast = true;
+                break;
+            }
+        }
+        if (_allowed_to_cast) {
+            target->setHP(0);
+            outputFile << this->getName() << " casts " << spellName << " on " << target->getName() << "!" << std::endl;
+
+        } else {
+            outputFile << "Error caught" << std::endl;
+            return;
+        }
+        this->spellBook->removeItem(spellName);
     }
 
-    std::shared_ptr<SpellBook> getSpellBook() {return this->spellBook;}
+    void showArsenal(std::ofstream &outputFile) {
+
+        std::string _tempOutput_w;
+        std::vector<std::string> sorted_temp_output;
+
+        for (const auto& [key, value] : this->arsenal->elements) {
+            sorted_temp_output.push_back(key + ":" + std::to_string(value->getDamage()) + " ");
+        }
+
+        sort(sorted_temp_output.begin(),sorted_temp_output.end());
+        for (const auto & i : sorted_temp_output) {
+            _tempOutput_w += i;
+        }
+
+        outputFile << _tempOutput_w << std::endl;
+    }
+
+    void showMedicalBag(std::ofstream &outputFile) {
+        std::string _tempOutput_p;
+        std::vector<std::string> sorted_temp_output;
+
+        for (const auto& [key, value] : this->medicalBag->elements) {
+            sorted_temp_output.push_back(key + ":" + std::to_string(value->getHealValue()) + " ");
+        }
+
+        sort(sorted_temp_output.begin(),sorted_temp_output.end());
+        for (const auto & i : sorted_temp_output) {
+            _tempOutput_p += i;
+        }
+
+        outputFile << _tempOutput_p << std::endl;
+    }
+
+    void showSpellBook(std::ofstream &outputFile) {
+
+        std::string _tempOutput_s;
+        std::vector<std::string> sorted_temp_output;
+
+        for (const auto& [key, value] : this->spellBook->elements) {
+            sorted_temp_output.push_back(key + ":" + std::to_string(value->getNumAllowedTargets()/2) + " ");
+        }
+
+        sort(sorted_temp_output.begin(),sorted_temp_output.end());
+        for (const auto & i : sorted_temp_output) {
+            _tempOutput_s += i;
+        }
+
+        outputFile << _tempOutput_s << std::endl;
+    }
+
+    bool is_full_container_weapons(std::ofstream &outputFile, std::shared_ptr<Weapon> weapon, int max_weapons) {
+        if (this->arsenal->elements.size() >= max_weapons)  {
+            outputFile << "Error caught" << std::endl;
+            return false;
+        }
+        this->arsenal->addItem(std::move(weapon));
+        return true;
+    }
+
+    bool is_full_container_potions(std::ofstream &outputFile, std::shared_ptr<Potion> potion, int max_potions) {
+        if (this->medicalBag->elements.size() >= max_potions)  {
+            outputFile << "Error caught" << std::endl;
+            return false;
+        }
+        this->medicalBag->addItem(std::move(potion));
+        return true;
+    }
+
+    bool is_full_container_spells(std::ofstream &outputFile, std::shared_ptr<Spell> spell, int max_spells) {
+        if (this->spellBook->elements.size() >= max_spells)  {
+            outputFile << "Error caught" << std::endl;
+            return false;
+        }
+        this->spellBook->addItem(std::move(spell));
+        return true;
+    }
+
 };
 
 
-class Fighter : public WeaponUser, public PotionUser {
+class Fighter : public Character {
 public:
-    Fighter(const std::string& name, int healthPoints) : WeaponUser(name, healthPoints, MAX_ALLOWED_WEAPONS, "fighter"), PotionUser(name, healthPoints, MAX_ALLOWED_POTIONS, "fighter") {}
+
+    Fighter(const std::string& name, int healthPoints) : Character(name, healthPoints, "fighter", std::make_shared<Arsenal>(), std::make_shared<MedicalBag>(), nullptr) {
+
+    }
     ~Fighter() override = default;
 
     static const int MAX_ALLOWED_WEAPONS = 3;
     static const int MAX_ALLOWED_POTIONS = 5;
+
 };
 
 
-class Archer : public WeaponUser, public PotionUser, public SpellUser {
+class Archer : public Character {
 public:
-    Archer(const std::string& name, int healthPoints) : WeaponUser(name, healthPoints, MAX_ALLOWED_WEAPONS, "archer"), PotionUser(name, healthPoints, MAX_ALLOWED_POTIONS, "archer"), SpellUser(name, healthPoints, MAX_ALLOWED_SPELLS, "archer") {}
+    Archer(const std::string& name,
+           int healthPoints) : Character(name, healthPoints, "archer",
+                                         std::make_shared<Arsenal>(), std::make_shared<MedicalBag>(), std::make_shared<SpellBook>())
+    {}
     ~Archer() override = default;
 
     static const int MAX_ALLOWED_WEAPONS = 2;
     static const int MAX_ALLOWED_POTIONS = 3;
     static const int MAX_ALLOWED_SPELLS  = 2;
+
 };
 
 
-class Wizard : public PotionUser, public SpellUser {
+class Wizard : public Character {
 public:
-    Wizard(const std::string& name, int healthPoints) : PotionUser(name, healthPoints, MAX_ALLOWED_POTIONS, "wizard"), SpellUser(name, healthPoints, MAX_ALLOWED_SPELLS, "wizard") {}
+    Wizard(const std::string& name,
+           int healthPoints) : Character(name, healthPoints, "wizard", nullptr, std::make_shared<MedicalBag>(), std::make_shared<SpellBook>()) {}
     ~Wizard() override = default;
 
     static const int MAX_ALLOWED_POTIONS = 10;
     static const int MAX_ALLOWED_SPELLS  = 10;
+
 };
 
 
@@ -315,13 +326,14 @@ public:
     static void eventProcessing(std::vector<std::string> textLine, std::ofstream &outputFile) {
         std::string _event_type = textLine[0];
 
-        std::map <std::string, int> event;
-        event["Dialogue"] = 0;
-        event["Create"]   = 1;
-        event["Attack"]   = 2;
-        event["Cast"]     = 3;
-        event["Drink"]    = 4;
-        event["Show"]     = 5;
+        std::map<std::string, int> event;
+        event["Dialogue"]   = 0;
+        event["Create"]     = 1;
+        event["Attack"]     = 2;
+        event["Cast"]       = 3;
+        event["Drink"]      = 4;
+        event["Show"]       = 5;
+
 
         switch (event[_event_type]) {
             case 0: dialogue(textLine, outputFile); break;
@@ -335,6 +347,13 @@ public:
 
 private:
     static void dialogue(std::vector<std::string> textLine, std::ofstream &outputFile) {
+        if (textLine[1] != "Narrator") {
+            if (characters.count(textLine[1]) == 0) {
+                outputFile << "Error caught" << std::endl;
+                return;
+            }
+        }
+
         if (!(4 <= textLine.size() && textLine.size() <= 13)) {
             outputFile << "Error caught" << std::endl;
             return;
@@ -364,10 +383,15 @@ private:
             std::string character_name  = textLine[3];
             int         character_HP    = std::stoi(textLine[4]);
 
-            switch (character[character_class]) {
-                case 'f': std::make_shared<Fighter>(character_name, character_HP);  break;
-                case 'w': std::make_shared<Wizard>(character_name, character_HP);   break;
-                case 'a': std::make_shared<Archer>(character_name, character_HP);   break;
+            if (character[character_class] == 'f') {
+                std::shared_ptr<Fighter> fighter = std::make_shared<Fighter>(character_name, character_HP);
+                characters.insert({character_name, fighter});
+            } else if (character[character_class] == 'w') {
+                std::shared_ptr<Wizard> wizard = std::make_shared<Wizard>(character_name, character_HP);
+                characters.insert({character_name, wizard});
+            } else if (character[character_class] == 'a') {
+                std::shared_ptr<Archer> archer = std::make_shared<Archer>(character_name, character_HP);
+                characters.insert({character_name, archer});
             }
 
             outputFile << "A new " << character_class << " came to town, " << character_name << "." << std::endl;
@@ -378,84 +402,81 @@ private:
                 std::string item_owner                  = textLine[3];
                 std::string item_name                   = textLine[4];
                 int         item_unique_action_value    = std::stoi(textLine[5]);
-                std::shared_ptr<Character> owner        = Character::getMapCharacters().find(item_owner)->second;
 
-                if (!(1 <= item_unique_action_value && item_unique_action_value <= 50)) {
+                int max_weapons;
+                int max_potions;
+                int max_spells;
+
+                if (characters.count(item_owner) == 0) {
                     outputFile << "Error caught" << std::endl;
                     return;
                 }
 
-                switch (character[item_type]) {
-                    WeaponUser *weaponUser;
-                    PotionUser *potionUser;
-                    SpellUser *spellUser;
-                    case 'w':
-                        weaponUser = (WeaponUser *) &owner;
-                        if (owner->getClassType() == "wizard") {
-                            outputFile << "Error caught" << std::endl;
-                            break;
-                        }
-                        if (owner->getClassType() == "fighter") {
-                            if (weaponUser->getArsenal()->getElements().size() >= Fighter::MAX_ALLOWED_WEAPONS)  {
-                                outputFile << "Error caught" << std::endl;
-                                break;
-                            }
-                        } else if (owner->getClassType() == "archer") {
-                            if (weaponUser->getArsenal()->getElements().size() >= Archer::MAX_ALLOWED_WEAPONS)  {
-                                outputFile << "Error caught" << std::endl;
-                                break;
-                            }
-                        }
+                std::shared_ptr<Character> owner = characters.find(item_owner)->second;
 
-                        weaponUser->getArsenal()->addItem(std::make_shared<Weapon>(item_name, item_unique_action_value, owner));
-                        break;
+                if(item[item_type] != 'p' && item[item_type] != 's') {
+                    if (!(1 <= item_unique_action_value && item_unique_action_value <= 50)) {
+                        outputFile << "Error caught" << std::endl;
+                        return;
+                    }
+                }
 
-                    case 'p':
-                        potionUser = (PotionUser *) &owner;
-                        if (owner->getClassType() == "fighter") {
-                            if (potionUser->getMedicalBag()->getElements().size() >= Fighter::MAX_ALLOWED_POTIONS)  {
-                                outputFile << "Error caught" << std::endl;
-                                break;
-                            }
-                        } else if (owner->getClassType() == "archer") {
-                            if (potionUser->getMedicalBag()->getElements().size() >= Archer::MAX_ALLOWED_POTIONS)  {
-                                outputFile << "Error caught" << std::endl;
-                                break;
-                            }
-                        } else if (owner->getClassType() == "wizard") {
-                            if (potionUser->getMedicalBag()->getElements().size() >= Wizard::MAX_ALLOWED_POTIONS)  {
-                                outputFile << "Error caught" << std::endl;
-                                break;
-                            }
-                        }
+                if (owner->getClassType() == "fighter") {
+                    max_weapons = Fighter::MAX_ALLOWED_WEAPONS;
+                    max_potions = Fighter::MAX_ALLOWED_POTIONS;
+                } else if (owner->getClassType() == "archer") {
+                    max_weapons = Archer::MAX_ALLOWED_WEAPONS;
+                    max_potions = Archer::MAX_ALLOWED_POTIONS;
+                    max_spells = Archer::MAX_ALLOWED_SPELLS;
+                } else if (owner->getClassType() == "wizard") {
+                    max_potions = Wizard::MAX_ALLOWED_POTIONS;
+                    max_spells = Wizard::MAX_ALLOWED_SPELLS;
+                }
 
-                        potionUser->getMedicalBag()->addItem(std::make_shared<Potion>(item_name, item_unique_action_value, owner));
-                        break;
-
-                    case 's':
-                        spellUser = (SpellUser *) &owner;
-                        if (owner->getClassType() == "fighter") {
-                            outputFile << "Error caught" << std::endl;
-                            break;
-                        }
-                        if (owner->getClassType() == "archer") {
-                            if (spellUser->getSpellBook()->getElements().size() >= Archer::MAX_ALLOWED_SPELLS)  {
-                                outputFile << "Error caught" << std::endl;
-                                break;
-                            }
-                        } else if (owner->getClassType() == "wizard") {
-                            if (spellUser->getSpellBook()->getElements().size() >= Wizard::MAX_ALLOWED_SPELLS)  {
-                                outputFile << "Error caught" << std::endl;
-                                break;
-                            }
-                        }
-
+                if (item[item_type] == 'w') {
+                    if (owner->getClassType() == "wizard") {
+                        outputFile << "Error caught" << std::endl;
+                        return;
+                    }
+                    std::shared_ptr<Weapon> weapon = std::make_shared<Weapon>(item_name, item_unique_action_value);
+                    if (!owner->is_full_container_weapons(outputFile, weapon, max_weapons)) {
+                        return;
+                    }
+                } else if (item[item_type] == 'p') {
+                    if (item_unique_action_value < 1) {
+                        outputFile << "Error caught" << std::endl;
+                        return;
+                    }
+                    std::shared_ptr<Potion> potion = std::make_shared<Potion>(item_name, item_unique_action_value);
+                    if (!owner->is_full_container_potions(outputFile, potion, max_potions)) {
+                        return;
+                    }
+                } else if (item[item_type] == 's') {
+                    if (owner->getClassType() == "fighter") {
+                        outputFile << "Error caught" << std::endl;
+                        return;
+                    }
+                    if (item_unique_action_value > 0) {
                         std::vector<std::shared_ptr<Character>> targets(item_unique_action_value);
                         for (int i = 1; i < item_unique_action_value+1; ++i) {
-                            targets.push_back(Character::getMapCharacters().find(textLine[5+i])->second);
+                            if (characters.count(textLine[5+i]) == 0) {
+                                outputFile << "Error caught" << std::endl;
+                                return;
+                            }
+                            targets.push_back(characters.find(textLine[5+i])->second);
                         }
-                        spellUser->getSpellBook()->addItem(std::make_shared<Spell>(item_name, targets, owner));
-                        break;
+                        std::shared_ptr<Spell> spell = std::make_shared<Spell>(item_name, targets);
+                        if (!owner->is_full_container_spells(outputFile, spell, max_spells)) {
+                            return;
+                        }
+                    } else if (item_unique_action_value == 0) {
+                        std::vector<std::shared_ptr<Character>> targets;
+                        std::shared_ptr<Spell> spell = std::make_shared<Spell>(item_name, targets);
+                        if (!owner->is_full_container_spells(outputFile, spell, max_spells)) {
+                            return;
+                        }
+                    }
+
                 }
 
                 outputFile << item_owner << " just obtained a new " << item_type << " called " << item_name << "." << std::endl;
@@ -470,43 +491,69 @@ private:
         std::string attackerName    = textLine[1];
         std::string targetName      = textLine[2];
         std::string weaponName      = textLine[3];
-        auto attackerID             = Character::characters.find(attackerName);
-        auto targetID               = Character::characters.find(targetName);
+        if (characters.count(attackerName) == 0 || characters.count(targetName) == 0) {
+            outputFile << "Error caught" << std::endl;
+            return;
+        }
+        auto attackerID             = characters.find(attackerName);
+        auto targetID               = characters.find(targetName);
 
-        if (attackerID != Character::getMapCharacters().end() && targetID != Character::getMapCharacters().end()) {
+        if (attackerID != characters.end() && targetID != characters.end()) {
             auto attacker = attackerID->second;
             auto target = targetID->second;
-            auto attackFighter = (WeaponUser*)&attacker;
+
+            if (attacker->getClassType() == "wizard") {
+                outputFile << "Error caught" << std::endl;
+                return;
+            }
 
             if (attacker && target) {
-                attackFighter->attack(target, weaponName, outputFile);
-                outputFile << attacker->getName() << " attacks " << target->getName() << " with their " << weaponName << "!" << std::endl;
+                attacker->attack(target, weaponName, outputFile);
+                if (target->getHP() <= 0) {
+                    outputFile << target->getName() << " has died..." << std::endl;
+                    characters.erase(targetName);
+                    target->~Character();
+                    target.reset();
+                }
             }
         } else {
             outputFile << "Error caught" << std::endl;
+            return;
         }
-
-
     }
 
     static void cast(std::vector<std::string> textLine, std::ofstream &outputFile) {
         std::string casterName  = textLine[1];
         std::string targetName  = textLine[2];
         std::string castName    = textLine[3];
-        auto casterID           = Character::getMapCharacters().find(casterName);
-        auto targetID           = Character::getMapCharacters().find(targetName);
+        if (characters.count(casterName) == 0 || characters.count(targetName) == 0) {
+            outputFile << "Error caught" << std::endl;
+            return;
+        }
+        auto casterID           = characters.find(casterName);
+        auto targetID           = characters.find(targetName);
 
-        if (casterID != Character::getMapCharacters().end() && targetID != Character::getMapCharacters().end()) {
+        if (casterID != characters.end() && targetID != characters.end()) {
             auto caster = casterID->second;
             auto target = targetID->second;
-            auto casterWizard = (SpellUser*)&caster;
+
+            if (caster->getClassType() == "fighter") {
+                outputFile << "Error caught" << std::endl;
+                return;
+            }
 
             if (caster && target) {
-                casterWizard->cast(target, castName, outputFile);
-                outputFile << caster->getName() << " casts " << castName << " on " << target->getName() << "!" << std::endl;
+                caster->cast(target, castName, outputFile);
+                if (target->getHP() <= 0) {
+                    outputFile << target->getName() << " has died..." << std::endl;
+                    characters.erase(targetName);
+                    target->~Character();
+                    target.reset();
+                }
             }
         } else {
             outputFile << "Error caught" << std::endl;
+            return;
         }
     }
 
@@ -514,17 +561,19 @@ private:
         std::string supplierName    = textLine[1];
         std::string drinkerName     = textLine[2];
         std::string potionName      = textLine[3];
-        auto supplierID             = Character::getMapCharacters().find(supplierName);
-        auto drinkerID              = Character::getMapCharacters().find(drinkerName);
+        if (characters.count(supplierName) == 0 || characters.count(drinkerName) == 0) {
+            outputFile << "Error caught" << std::endl;
+            return;
+        }
+        auto supplierID             = characters.find(supplierName);
+        auto drinkerID              = characters.find(drinkerName);
 
-        if (supplierID != Character::getMapCharacters().end() && drinkerID != Character::getMapCharacters().end()) {
+        if (supplierID != characters.end() && drinkerID != characters.end()) {
             auto supplier = supplierID->second;
             auto drinker = drinkerID->second;
-            auto drinkerUser = (PotionUser*)&supplier;
 
             if (supplier && drinker) {
-                drinkerUser->drink(drinker, potionName, outputFile);
-                outputFile << supplier->getName() << " drinks " << potionName << " from " << drinker->getName() << "!" << std::endl;
+                supplier->drink(drinker, potionName, outputFile);
             }
         } else {
             outputFile << "Error caught" << std::endl;
@@ -533,84 +582,56 @@ private:
 
     static void show(std::vector<std::string> textLine, std::ofstream &outputFile) {
         std::string type_show = textLine[1];
-
         std::map<std::string, char> types;
         types["characters"]  = 'c';
         types["weapons"]     = 'w';
         types["potions"]     = 'p';
         types["spells"]      = 's';
+        if (types[type_show] != 'c') {
+            if (characters.count(textLine[2]) == 0) {
+                outputFile << "Error caught" << std::endl;
+                return;
+            }
+        }
         try {
             if (types[type_show] == 'c') {
-                std::_Rb_tree_iterator<std::pair<const std::basic_string<char>, std::shared_ptr<Character>>> iter_c = Character::getMapCharacters().begin();
                 std::string _tempOutput_c;
                 std::vector<std::string> sorted_temp_output;
-                while (iter_c != Character::getMapCharacters().end())
-                {
-                    sorted_temp_output.push_back(iter_c->second->getName() + ":" + iter_c->second->getClassType() + ":" + std::to_string(iter_c->second->getHP()) + " ");
+
+                sorted_temp_output.reserve(characters.size());
+                for (const auto& [key, value] : characters) {
+                    sorted_temp_output.push_back(key + ":" + value->getClassType() + ":" + std::to_string(value->getHP()) + " ");
                 }
+
                 sort(sorted_temp_output.begin(),sorted_temp_output.end());
-                for (int i = 0; i < sorted_temp_output.size(); ++i) {
-                    _tempOutput_c += sorted_temp_output[i];
+                for (const auto & i : sorted_temp_output) {
+                    _tempOutput_c += i;
                 }
 
                 outputFile << _tempOutput_c << std::endl;
 
             } else if (types[type_show] == 'w') {
                 std::string owner_weapon_name = textLine[2];
-                auto owner_w = (WeaponUser*)&Character::getMapCharacters().find(owner_weapon_name)->second;
-                std::_Rb_tree_iterator<std::pair<const std::basic_string<char>, std::shared_ptr<Weapon>>> iter_w = owner_w->getArsenal()->getElements().begin();
-                std::string _tempOutput_w;
-                std::vector<std::string> sorted_temp_output;
-                while (iter_w != owner_w->getArsenal()->getElements().end())
-                {
-                    auto pWeapon = (Weapon*)&iter_w->second;
-                    int damage = pWeapon->getDamage();
-                    sorted_temp_output.push_back(iter_w->second->getName() + ":" + std::to_string(damage) + " ");
+                auto owner_w = characters.find(owner_weapon_name)->second;
+                if (owner_w->getClassType() == "wizard") {
+                    outputFile << "Error caught" << std::endl;
+                    return;
                 }
-                sort(sorted_temp_output.begin(),sorted_temp_output.end());
-                for (int i = 0; i < sorted_temp_output.size(); ++i) {
-                    _tempOutput_w += sorted_temp_output[i];
-                }
-
-                outputFile << _tempOutput_w << std::endl;
+                owner_w->showArsenal(outputFile);
 
             } else if (types[type_show] == 'p') {
                 std::string owner_potion_name = textLine[2];
-                auto owner_p = (PotionUser*)&Character::getMapCharacters().find(owner_potion_name)->second;
-                std::_Rb_tree_iterator<std::pair<const std::basic_string<char>, std::shared_ptr<Potion>>> iter_p = owner_p->getMedicalBag()->getElements().begin();
-                std::string _tempOutput_p;
-                std::vector<std::string> sorted_temp_output;
-                while (iter_p != owner_p->getMedicalBag()->getElements().end())
-                {
-                    auto pPotion = (Potion*)&iter_p->second;
-                    int healValue = pPotion->getHealValue();
-                    sorted_temp_output.push_back(iter_p->second->getName() + ":" + std::to_string(healValue) + " ");
-                }
-                sort(sorted_temp_output.begin(),sorted_temp_output.end());
-                for (int i = 0; i < sorted_temp_output.size(); ++i) {
-                    _tempOutput_p += sorted_temp_output[i];
-                }
-
-                outputFile << _tempOutput_p << std::endl;
+                auto owner_p = characters.find(owner_potion_name)->second;
+                owner_p->showMedicalBag(outputFile);
 
             } else if (types[type_show] == 's') {
                 std::string owner_spell_name = textLine[2];
-                auto owner_s = (SpellUser*)&Character::getMapCharacters().find(owner_spell_name)->second;
-                std::_Rb_tree_iterator<std::pair<const std::basic_string<char>, std::shared_ptr<Spell>>> iter_s = owner_s->getSpellBook()->getElements().begin();
-                std::string _tempOutput_s;
-                std::vector<std::string> sorted_temp_output;
-                while (iter_s != owner_s->getSpellBook()->getElements().end())
-                {
-                    auto pSpell = (Spell*)&iter_s->second;
-                    int allowedTargets = pSpell->getNumAllowedTargets();
-                    sorted_temp_output.push_back(iter_s->second->getName() + ":" + std::to_string(allowedTargets) + " ");
+                auto owner_s = characters.find(owner_spell_name)->second;
+                if (owner_s->getClassType() == "fighter") {
+                    outputFile << "Error caught" << std::endl;
+                    return;
                 }
-                sort(sorted_temp_output.begin(),sorted_temp_output.end());
-                for (int i = 0; i < sorted_temp_output.size(); ++i) {
-                    _tempOutput_s += sorted_temp_output[i];
-                }
-
-                outputFile << _tempOutput_s << std::endl;
+                owner_s->showSpellBook(outputFile);
             }
 
         } catch (...) {
@@ -651,8 +672,3 @@ int main() {
 
     return 0;
 }
-
-template<typename T>
-std::map<std::string, std::shared_ptr<T>> Container<T>::elements;
-
-std::map<std::string, std::shared_ptr<Character>> Character::characters;
